@@ -1,23 +1,14 @@
 import logo from './logo.svg';
 import './App.css';
+import SharedRendererViewer from './components/sharedRenderViewer';
+import SharedRendererRenderer from './components/sharedRenderer';
 
 function App() {
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <SharedRendererViewer width={window.innerWidth/2} height={window.innerHeight/2}></SharedRendererViewer>
+      <SharedRendererRenderer width={window.innerWidth/2} height={window.innerHeight/2}></SharedRendererRenderer>
+      <SharedRendererViewer width={window.innerWidth/2} height={window.innerHeight/2}></SharedRendererViewer>
     </div>
   );
 }
