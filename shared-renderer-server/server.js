@@ -15,71 +15,94 @@ var image_base64='data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAQCAwM
 var renderPairs = [];
 var waitingViewers = [];
 
+app.get('/', (req, res) => {
+  res.send(`RenderPairsCount: ${renderPairs.length} , WaitingViewers: ${waitingViewers.length}`);
+  console.log(renderPairs);
+});
+
 class RenderPair {
   constructor (renderer, viewer){
-    this.renderer = renderer; 
-    this.viewer = viewer;
+    if(renderer){
+      this.renderer = renderer; 
+      this.renderer.on('disconnect', ()=>{
+        console.log("Renderer disconnected!")
+        renderPairs = renderPairs.filter((it) => it.renderer !== this.renderer);
+        waitingViewers.push(this.viewer);
+        this.unbindViewer();
+      });
+    }
+    if(viewer){
+      this.viewer = viewer;
+    }else{
+      this.viewer = null;
+    }
   }
 
-  disconnectRenderer(){
-    addViewer(this.viewer);
+  bindViewer(viewer){
+    if(viewer){
+      this.viewer = viewer;
+      this.renderer.on("image-data", (img) =>{
+        if(this.viewer){
+          this.viewer.emit("image-data",img);
+        }
+      });
+      this.viewer.emit("viewer_dequeued");
+      console.log(`viewer ${this.viewer.id} connected to renderer ${this.renderer.id}`)
+    }
   }
 
-  setViewer(socket){
-    this.viewer = socket;
-    this.renderer.on("image-data", (img)=>{
-      socket.emit("image-data",img);
-    });
-    this.viewer.on('disconnect', function() {
-      if(this.renderer){
-        this.renderer.on("image-data", ()=>{});
-      }
-    });
+  unbindViewer(){
+    if(this.viewer){
+      console.log(`viewer ${this.viewer.id} disconnected from renderer ${this.renderer.id}`)
+      this.viewer.emit("viewer_queued");
+      this.viewer = null;
+    }
   }
   
 }
 
-app.get('/', (req, res) => {
-  res.send(`RenderPairsCount: ${renderPairs.length} , WaitingViewers: ${waitingViewers.length}`);
-});
-
-var addRenderer = function(socket){
-  var renderPair = new RenderPair(socket, null);
-  if(waitingViewers.length != 0){
-    renderPair.setViewer(waitingViewers.pop());
-    renderPair.viewer.emit("viewer_dequeued");
+var addRenderer = (renderer) => {
+  var renderPair = new RenderPair(renderer, null);
+  if(waitingViewers.length > 0){
+    renderPair.bindViewer(waitingViewers.shift());
   }
   renderPairs.push(renderPair);
-  socket.on('disconnect', function() {
-    renderPairs.splice(renderPairs.findIndex((it)=> it.renderer == socket),1);
-  });
 }
 
-var addViewer = function(socket){
+var addViewer = (viewer) => {
+  viewer.on("disconnect", ()=>{
+    console.log("viewer disconnected!");
+    waitingViewers = waitingViewers.filter((it) => it.id != viewer.id);
+    var renderPair = renderPairs.find((it) => it.viewer == viewer);
+    if(renderPair){
+      renderPair.unbindViewer();
+      if(waitingViewers.length > 0){
+        renderPair.bindViewer(waitingViewers.shift());
+      }
+    }
+  });
+
   for(var renderPair of renderPairs){
-    if(renderPair.viewer == null){
-      renderPair.setViewer(socket);
-      console.log(renderPairs)
+    if(!renderPair.viewer){
+      renderPair.bindViewer(viewer);
       return;
     }
   }
-  waitingViewers.push(socket);
-  socket.emit("viewer_queued");
+  
+  waitingViewers.push(viewer);
+  viewer.emit("viewer_queued");
 }
 
 io.on('connection', (socket) => {
-  socket.emit("image-data",image_base64);
-
-  socket.on("available_renderer", function(){
+  socket.on("available_renderer",() => {
     console.log("renderer available!");
     addRenderer(socket);
   })
 
-  socket.on("available_viewer", function(){
+  socket.on("available_viewer", () => {
     console.log("viewer available!");
     addViewer(socket);
   });
-
 });
 
 server.listen(2181, () => {
