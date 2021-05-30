@@ -51,10 +51,9 @@ class SharedRendererViewer extends Component {
 
   render() { 
       return <div style={{backgroundColor: "DarkGray", width: this.props.width, height: this.props.height, float: "right"}}>
-        <h3>{this.state.queued? "Waiting for available renderer": "Rendered on another machine!"}</h3>
         {this.state.connected? <button onClick={this.disconnect.bind(this)}>Disconnect</button> : <button onClick={this.connect.bind(this)}>Connect</button>}
         <p>{this.socket.id}</p>
-        <img src={this.state.image_data}></img>
+        <img src={this.state.image_data} style={{width: this.props.width, height: this.props.height, clip: "auto", "object-fit":"cover"}}></img>
       </div>;
   }
 }

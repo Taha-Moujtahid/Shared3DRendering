@@ -1,6 +1,7 @@
 import {React, Component} from "react"
 import * as THREE from "three"
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader";
 
 import socketIOClient from "socket.io-client";
 const ENDPOINT = "http://localhost:2181";
@@ -19,11 +20,12 @@ class SharedRenderer extends Component {
             socket.emit("available_renderer");
         });
         var scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xcecece)
         this.scene = scene
 
         //camera setup
         var camera = new THREE.PerspectiveCamera( 75, this.props.width/this.props.height, 0.1, 1000 );
-        camera.position.z = 5;
+        camera.position.z = 10;
         this.camera = camera;
 
         // renderer setup
@@ -36,32 +38,47 @@ class SharedRenderer extends Component {
         // controls setup
         var controls = new OrbitControls(camera, renderer.domElement);
 
-        // add cube to scene
+        // add plant model to scene
+        var loader = new GLTFLoader();
+        loader.load(
+            'models/plant.glb', 
+            (model)=>{
+                model.scene.castShadow = false
+                model.scene.receiveShadow = false
+                model.scene.scale.set(0.5,0.5,0.5)
+                scene.add(model.scene);
+            },
+            ( xhr )=>{},
+            (err)=>console.log(err)
+        );
+
+        scene.add(new THREE.AmbientLight(0xffffff,1))
+        for(var i = 0; i != 10; i++){
+            const directionalLight = new THREE.DirectionalLight( 0xffffff, 0.25 );
+            i % 2 ? directionalLight.position.set( -i*10, 10, i*10 ) :directionalLight.position.set( i*10, 10, -i*10 ) ;
+            scene.add( directionalLight );
+        } 
+
         
-        var geometry = new THREE.BoxGeometry( 1, 1, 1 );
-        var material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
-        var cube = new THREE.Mesh( geometry, material );
-        scene.add( cube );
 
-        var width = this.props.width, height= this.props.height, oldScreen = this.oldScreen;
+        let width = this.props.width, height= this.props.height ;
         //main loop
-        var animate = function () {
-
-            var compareImages = function(oldScreen, renderer, scene, camera, width, height, limit){
-                var read = new Uint8Array( width * height * 4 );
-                var renderTarget = new THREE.WebGLRenderTarget(width,height);
-                renderer.setRenderTarget(renderTarget);
-                renderer.render( scene, camera );
-                renderer.setRenderTarget(null);
-                renderer.readRenderTargetPixels(renderTarget,0,0,width,height, read)
+        var animate = ()=>{
+            var renderTarget = new THREE.WebGLRenderTarget(width,height);
+            var read = new Uint8Array( width * height * 4 );
+            renderer.setRenderTarget(renderTarget);
+            renderer.render( scene, camera );
+            renderer.setRenderTarget(null);
+            renderer.readRenderTargetPixels(renderTarget,0,0,width,height, read)
+            var oldScreen = this.oldScreen
+            var compareImages = (limit)=>{
                 if(oldScreen){
                     var diff = 0;
-                    for(var pixel = 0; pixel <= this.oldScreen.length; pixel++){
+                    for(var pixel = 0; pixel <= oldScreen.length; pixel++){
                         diff += Math.abs(oldScreen[pixel] - read[pixel])/255;
                     }
-                    console.log(diff/4/width/height);
                     if(diff/4/width/height >= limit){
-                        this.oldScreen = read;
+                        oldScreen = read;
                         return true;
                     }else{
                         return false;
@@ -75,10 +92,10 @@ class SharedRenderer extends Component {
             controls.update();
             renderer.render( scene, camera );
             if(socket.connected){
-                if(compareImages(oldScreen, renderer,scene,camera,width,height, 0.10)){
+                if(compareImages(0.10)){
                     console.log("differs");
-                    socket.emit("image-data",renderer.domElement.toDataURL(strMime));
                 }
+                socket.emit("image-data",renderer.domElement.toDataURL(strMime));
             }
         };
         animate();
