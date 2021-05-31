@@ -19,6 +19,7 @@ class SharedRenderer extends Component {
             console.log("connected");
             socket.emit("available_renderer");
         });
+
         var scene = new THREE.Scene();
         scene.background = new THREE.Color(0xcecece)
         this.scene = scene
@@ -32,11 +33,51 @@ class SharedRenderer extends Component {
         var renderer = new THREE.WebGLRenderer({preserveDrawingBuffer: true});
         this.renderer = renderer;
 
-        renderer.setSize( this.props.width, this.props.height );
-        this.mount.appendChild( renderer.domElement );
-        
         // controls setup
         var controls = new OrbitControls(camera, renderer.domElement);
+        
+
+        //add to DOM and bind event listener
+        renderer.setSize( this.props.width, this.props.height );
+        this.mount.appendChild( renderer.domElement );
+        socket.on("trigger_event",(clientEvent)=>{
+            var event;
+            console.log(clientEvent)
+            var eventInitDict = {
+                isTrusted:true,
+                view: window,
+                bubbles: true,
+                cancelable: false,
+                clientX: clientEvent.clientX,
+                clientY: clientEvent.clientY,
+                delta: clientEvent.delta,
+                deltaX: clientEvent.deltaX,
+                deltaY: clientEvent.deltaY,
+                button: clientEvent.button,
+                buttons: clientEvent.buttons,
+                target:renderer.domElement
+            };
+            switch (clientEvent.eventType){
+                case "drag":
+                    event = new DragEvent('drag', eventInitDict);
+                    break;
+                case "wheel":
+                    event = new WheelEvent("wheel",eventInitDict);
+                    break;
+                case "pointerdown":
+                    event = new PointerEvent("down",eventInitDict);
+                    break;
+                case "contextmenu":
+                    event = new MouseEvent("conextmenu",eventInitDict);
+                    break;
+            }
+            console.log(event)
+            if(event){
+                console.log(this.renderer.domElement.dispatchEvent(event));
+            }
+        });
+        
+        
 
         // add plant model to scene
         var loader = new GLTFLoader();
@@ -53,7 +94,7 @@ class SharedRenderer extends Component {
         );
 
         scene.add(new THREE.AmbientLight(0xffffff,1))
-        for(var i = 0; i != 10; i++){
+        for(var i = 0; i !== 10; i++){
             const directionalLight = new THREE.DirectionalLight( 0xffffff, 0.25 );
             i % 2 ? directionalLight.position.set( -i*10, 10, i*10 ) :directionalLight.position.set( i*10, 10, -i*10 ) ;
             scene.add( directionalLight );
@@ -99,6 +140,9 @@ class SharedRenderer extends Component {
             }
         };
         animate();
+
+
+        
     }
 
     render() { 

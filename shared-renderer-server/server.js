@@ -46,6 +46,10 @@ class RenderPair {
       });
       this.viewer.emit("viewer_dequeued");
       console.log(`viewer ${this.viewer.id} connected to renderer ${this.renderer.id}`)
+      this.viewer.on("trigger_event",(obj)=>{
+        this.renderer.emit("trigger_event",obj);
+        console.log(obj)
+      })
     }
   }
 

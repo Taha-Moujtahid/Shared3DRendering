@@ -49,12 +49,64 @@ class SharedRendererViewer extends Component {
     });
   }
 
+  redirectEvent(event){
+    console.log(event)
+    event.preventDefault()
+    this.socket.emit(
+      "trigger_event",
+      {
+        "eventType": event.type, 
+        "clientX": event.clientX, 
+        "clientY": event.clientY,
+        "delta": event.delta,
+        "deltaX": event.deltaX,
+        "deltaY": event.deltaY,
+        "button": event.button,
+        "buttons": event.buttons
+      }
+    );
+    return false;
+  }
+
   render() { 
-      return <div style={{backgroundColor: "DarkGray", width: this.props.width, height: this.props.height, float: "right"}}>
-        {this.state.connected? <button onClick={this.disconnect.bind(this)}>Disconnect</button> : <button onClick={this.connect.bind(this)}>Connect</button>}
-        <p>{this.socket.id}</p>
-        <img src={this.state.image_data} style={{width: this.props.width, height: this.props.height, clip: "auto", "object-fit":"cover"}}></img>
-      </div>;
+      return (
+      <div 
+        style={{
+          backgroundColor: "DarkGray", 
+          width: this.props.width, 
+          height: this.props.height, 
+          float: "right", 
+          backgroundImage: "url("+this.state.image_data+")",
+          backgroundRepeat: "no-repeat"
+        }} 
+        onContextMenu={this.redirectEvent.bind(this)}
+        onPointerDown={this.redirectEvent.bind(this)}
+        onWheel={this.redirectEvent.bind(this)}
+        onTouchStart={this.redirectEvent.bind(this)}
+        onTouchEnd={this.redirectEvent.bind(this)}
+        onTouchMove={this.redirectEvent.bind(this)}
+        onDragStart={this.redirectEvent.bind(this)}
+        onDrag={this.redirectEvent.bind(this)}
+        onDragEnd={this.redirectEvent.bind(this)}
+      >
+        <div style={{position: "absolute", width:this.props.width}}>
+          {this.state.connected? <button onClick={this.disconnect.bind(this)}>Disconnect</button> : <button onClick={this.connect.bind(this)}>Connect</button>}
+          <p>{this.socket.id}</p>
+        </div>
+        {/*<img 
+          src={this.state.image_data} 
+          style={{width: this.props.width, height: this.props.height, clip: "auto", "objectFit":"cover"}} 
+          onContextMenu={this.redirectEvent.bind(this)}
+          onPointerDown={this.redirectEvent.bind(this)}
+          onWheel={this.redirectEvent.bind(this)}
+          onTouchStart={this.redirectEvent.bind(this)}
+          onTouchEnd={this.redirectEvent.bind(this)}
+          onTouchMove={this.redirectEvent.bind(this)}
+          //onDragStart={this.redirectEvent.bind(this)}
+          //onDrag={this.redirectEvent.bind(this)}
+          //onDragEnd={this.redirectEvent.bind(this)}
+        />*/}
+      </div>);
   }
 }
  
