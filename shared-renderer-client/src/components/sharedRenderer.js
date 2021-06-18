@@ -12,8 +12,6 @@ class SharedRenderer extends Component {
     oldScreen = null;
 
     componentDidMount() {
-        var strMime = "image/jpeg";
-
         var socket = socketIOClient(ENDPOINT);
         socket.on("connect", ()=>{
             console.log("connected");
@@ -136,7 +134,7 @@ class SharedRenderer extends Component {
                 if(compareImages(0.10)){
                     console.log("differs");
                 }
-                socket.emit("image-data",renderer.domElement.toDataURL(strMime));
+                socket.emit("image-data",renderer.domElement.toDataURL("image/jpeg",0.5));
             }
         };
         animate();
